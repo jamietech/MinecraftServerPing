@@ -1,18 +1,18 @@
 package tk.nekotech;
 
 public class MinecraftPingReply {
-    private String ip;
-    private int port;
-    private String motd;
-    private String version;
-    private int maxPlayers;
-    private int onlinePlayers;
+    private final String ip;
+    private final int port;
+    private final String motd;
+    private final String version;
+    private final int maxPlayers;
+    private final int onlinePlayers;
 
-    protected MinecraftPingReply(String ip, int port, String motd, int maxPlayers, int onlinePlayers) {
+    protected MinecraftPingReply(final String ip, final int port, final String motd, final int maxPlayers, final int onlinePlayers) {
         this(ip, port, motd, "Pre-12w42b", maxPlayers, onlinePlayers);
     }
 
-    protected MinecraftPingReply(String ip, int port, String motd, String version, int maxPlayers, int onlinePlayers) {
+    protected MinecraftPingReply(final String ip, final int port, final String motd, final String version, final int maxPlayers, final int onlinePlayers) {
         this.ip = ip;
         this.port = port;
         this.motd = motd;
@@ -25,23 +25,23 @@ public class MinecraftPingReply {
         return this.ip;
     }
 
-    public int getPort() {
-        return this.port;
+    public int getMaxPlayers() {
+        return this.maxPlayers;
     }
 
     public String getMotd() {
         return this.motd;
     }
 
-    public String getVersion() {
-        return this.version;
-    }
-
-    public int getMaxPlayers() {
-        return this.maxPlayers;
-    }
-
     public int getOnlinePlayers() {
         return this.onlinePlayers;
+    }
+
+    public int getPort() {
+        return this.port;
+    }
+
+    public String getVersion() {
+        return this.version;
     }
 }
