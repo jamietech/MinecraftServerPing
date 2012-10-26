@@ -8,13 +8,10 @@ import java.net.Socket;
 
 public class MinecraftPing {
     public MinecraftPingReply getOldPing(final String hostname, final int port) throws IOException {
-        Socket socket = null;
-        DataInputStream in = null;
-        DataOutputStream out = null;
-        socket = new Socket();
+        Socket socket = new Socket();
         socket.connect(new InetSocketAddress(hostname, port), 3000);
-        in = new DataInputStream(socket.getInputStream());
-        out = new DataOutputStream(socket.getOutputStream());
+        DataInputStream in = new DataInputStream(socket.getInputStream());
+        DataOutputStream out = new DataOutputStream(socket.getOutputStream());
         out.write(254);
         if (in.read() != 255) {
             throw new IOException("Bad message - An incorrect packet was received.");
@@ -32,13 +29,10 @@ public class MinecraftPing {
     }
 
     public MinecraftPingReply getPing(final String hostname, final int port) throws IOException {
-        Socket socket = null;
-        DataInputStream in = null;
-        DataOutputStream out = null;
-        socket = new Socket();
+        Socket socket = new Socket();
         socket.connect(new InetSocketAddress(hostname, port), 3000);
-        in = new DataInputStream(socket.getInputStream());
-        out = new DataOutputStream(socket.getOutputStream());
+        DataInputStream in = new DataInputStream(socket.getInputStream());
+        DataOutputStream out = new DataOutputStream(socket.getOutputStream());
         out.write(254);
         out.writeByte(1);
         if (in.read() != 255) {
