@@ -44,4 +44,9 @@ public class MinecraftPingReply {
     public String getVersion() {
         return this.version;
     }
+
+    @Override
+    public String toString() {
+        return String.format("{\"ip\":\"%s\",\"port\":%s,\"maxPlayers\":%s,\"onlinePlayers\":%s,\"motd\":\"%s\",\"protocolVersion\":\"%s\"}", this.getIp(), this.getPort(), this.getMaxPlayers(), this.getOnlinePlayers(), this.getMotd(), this.getVersion());
+    }
 }
