@@ -30,6 +30,7 @@ public class MinecraftPing {
         for (int i = 0; i < bit; ++i) {
             sb.append(in.readChar());
         }
+        out.close();
         final String[] bits = sb.toString().split("\0");
         if (bits.length != 6) {
             return this.getOldPing(sb.toString(), hostname, port);
