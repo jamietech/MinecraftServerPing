@@ -48,7 +48,8 @@ public class MinecraftPing {
      * @return {@link MinecraftPingReply} - list of basic server information
      * @throws IOException thrown when incorrect message supplied
      */
-    public MinecraftPingReply getOldPing(final String response, final String hostname, final int port) throws IOException {
+    @Deprecated
+    public MinecraftPingReply getPing(final String response, final String hostname, final int port) throws IOException {
         this.validate(response, "Response cannot be null. Try calling MinecraftPing.getPing().");
         this.validate(hostname, "Hostname cannot be null.");
         this.validate(port, "Port cannot be null.");
@@ -110,7 +111,7 @@ public class MinecraftPing {
 
         final String[] bits = sb.toString().split("\0");
         if (bits.length != 6) {
-            return this.getOldPing(sb.toString(), hostname, port);
+            return this.getPing(sb.toString(), hostname, port);
         }
 
         return new MinecraftPingReply(hostname, port, bits[3], bits[1], bits[2], Integer.valueOf(bits[4]), Integer.valueOf(bits[5]));
