@@ -1,20 +1,33 @@
 MinecraftServerPing
 ===================
 
-MinecraftServerPing is a Java API for interacting with the Minecraft server's MOTD packets. It allows you to quickly and easily access information easily available. Currently sent by the server is:
+MinecraftServerPing is a quick and easy Java API for grabbing Minecraft server information. It allows you to access information sent to the client to display on the server list. Currently, information available is:
 
- - MOTD
- - Server version
- - Online Players
- - Maximum Players
- 
-Please note that MinecraftServerPing is copyright 2013 jamietech and all copyright notices must remain intact in source.
+ * MOTD and favicon
+ * Server and protocol versions
+ * Player counts and samples
 
-###Usage Example
+*MinecraftServerPing requires [Gson](https://code.google.com/p/google-gson/) by Google to function.*
+
+Please leave the copyright notice intact in source if you copy source into your code rather than build path.
+
+If you require compatibility with the previous packets, use the [alpha tag](https://github.com/jamietech/MinecraftServerPing/releases/tag/alpha).
+
+The latest version of MinecraftServerPing is based heavily upon the work of [zh32](https://gist.github.com/zh32/7190955).
+
+###Configuration
+Configuration is provided through the `MinecraftPingOptions` class. This class provides the following configuration options:
+
+ * `String` hostname *(hostname of the server to query, **required**)*
+ * `int` port *(port of the server to query, **optional** default `25565`)*
+ * `int` timeout *(socket timeout in ms, **optional** default `2000`)*
+ * `String` charset *(charset for MOTD byte->string, **optional** default `UTF-8`)*
+
+###Example
 
 MinecraftServerPing is very easy to use and implement into any project. Simply clone the repo, compile the code and add it to your build path. Coding with it is as simple as this too:
 
 ```java
-System.out.println("mc2 has " + (new MinecraftServerPing()).getPing("mc2.joe.to").getOnlinePlayers() + " online users.");
-System.out.println("mc3's motd is " + (new MinecraftServerPing()).getPing("mc3.joe.to").getMotd();
+MinecraftPingReply data = new MinecraftPing().getPing(new MinecraftPingOptions().setHostname("example.com").setPort(25565));
+System.out.println(data.getDescription() + "  --  " + data.getPlayers().getOnline() + "/" + data.getPlayers().getMax());
 ```
