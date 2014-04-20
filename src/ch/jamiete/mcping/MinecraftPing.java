@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 jamietech. All rights reserved.
+ * Copyright 2014 jamietech. All rights reserved.
  * https://github.com/jamietech/MinecraftServerPing
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -28,108 +28,103 @@
  */
 package ch.jamiete.mcping;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import com.google.gson.Gson;
 
 public class MinecraftPing {
 
     /**
-     * Fetches a {@link MinecraftPingReply} for the supplied hostname on default port (25565). Will revert to pre-12w42b ping message if required.
+     * Fetches a {@link MinecraftPingReply} for the supplied hostname.
+     * <b>Assumed timeout of 2s and port of 25565.</b>
      * 
-     * @param hostname - the IP of the server to request ping from
-     * @param port - the port of the server to request ping from
-     * @return {@link MinecraftPingReply} - list of basic server information
-     * @throws IOException thrown when failed to receive packet or when incorrect packet is received
+     * @param hostname - a valid String hostname
+     * @return {@link MinecraftPingReply}
+     * @throws IOException 
      */
     public MinecraftPingReply getPing(final String hostname) throws IOException {
-        return this.getPing(hostname, 25565);
+        return this.getPing(new MinecraftPingOptions().setHostname(hostname));
     }
 
     /**
-     * Fetches a {@link MinecraftPingReply} for the supplied hostname and port. Will revert to pre-12w42b ping message if required.
+     * Fetches a {@link MinecraftPingReply} for the supplied options.
      * 
-     * @param hostname - the IP of the server to request ping from
-     * @param port - the port of the server to request ping from
-     * @return {@link MinecraftPingReply} - list of basic server information
-     * @throws IOException thrown when failed to receive packet or when incorrect packet is received
+     * @param options - a filled instance of {@link MinecraftPingOptions}
+     * @return {@link MinecraftPingReply}
+     * @throws IOException 
      */
-    public MinecraftPingReply getPing(final String hostname, final int port) throws IOException {
-        this.validate(hostname, "Hostname cannot be null.");
-        this.validate(port, "Port cannot be null.");
+    public MinecraftPingReply getPing(final MinecraftPingOptions options) throws IOException {
+        MinecraftPingUtil.validate(options.getHostname(), "Hostname cannot be null.");
+        MinecraftPingUtil.validate(options.getPort(), "Port cannot be null.");
 
         final Socket socket = new Socket();
-        socket.connect(new InetSocketAddress(hostname, port), 3000);
+        socket.connect(new InetSocketAddress(options.getHostname(), options.getPort()), options.getTimeout());
 
         final DataInputStream in = new DataInputStream(socket.getInputStream());
         final DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
-        out.write(0xFE);
-        out.write(0x01);
-        out.write(0xFA);
-        out.writeShort(11);
-        out.writeChars("MC|PingHost");
-        out.writeShort(7 + 2 * hostname.length());
-        out.writeByte(73); // Protocol version
-        out.writeShort(hostname.length());
-        out.writeChars(hostname);
-        out.writeInt(port);
+        //> Handshake
 
-        out.flush();
+        ByteArrayOutputStream handshake_bytes = new ByteArrayOutputStream();
+        DataOutputStream handshake = new DataOutputStream(handshake_bytes);
 
-        if (in.read() != 255) {
-            throw new IOException("Bad message: An incorrect packet was received.");
-        }
+        handshake.writeByte(MinecraftPingUtil.PACKET_HANDSHAKE);
+        MinecraftPingUtil.writeVarInt(handshake, MinecraftPingUtil.PROTOCOL_VERSION);
+        MinecraftPingUtil.writeVarInt(handshake, options.getHostname().length());
+        handshake.writeBytes(options.getHostname());
+        handshake.writeShort(options.getPort());
+        MinecraftPingUtil.writeVarInt(handshake, MinecraftPingUtil.STATUS_HANDSHAKE);
 
-        final short bit = in.readShort();
+        MinecraftPingUtil.writeVarInt(out, handshake_bytes.size());
+        out.write(handshake_bytes.toByteArray());
 
-        final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < bit; ++i) {
-            sb.append(in.readChar());
-        }
+        //> Status request
 
+        out.writeByte(0x01); // Size of packet
+        out.writeByte(MinecraftPingUtil.PACKET_STATUSREQUEST);
+
+        //< Status response
+
+        MinecraftPingUtil.readVarInt(in); // Size
+        int id = MinecraftPingUtil.readVarInt(in);
+
+        MinecraftPingUtil.io(id == -1, "Server prematurely ended stream.");
+        MinecraftPingUtil.io(id != MinecraftPingUtil.PACKET_STATUSREQUEST, "Server returned invalid packet.");
+
+        int length = MinecraftPingUtil.readVarInt(in);
+        MinecraftPingUtil.io(length == -1, "Server prematurely ended stream.");
+        MinecraftPingUtil.io(length == 0, "Server returned unexpected value.");
+
+        byte[] data = new byte[length];
+        in.readFully(data);
+        String json = new String(data, options.getCharset());
+
+        //> Ping
+
+        out.writeByte(0x09); // Size of packet
+        out.writeByte(MinecraftPingUtil.PACKET_PING);
+        out.writeLong(System.currentTimeMillis());
+
+        //< Ping
+
+        MinecraftPingUtil.readVarInt(in); // Size
+        id = MinecraftPingUtil.readVarInt(in);
+        MinecraftPingUtil.io(id == -1, "Server prematurely ended stream.");
+        MinecraftPingUtil.io(id != MinecraftPingUtil.PACKET_PING, "Server returned invalid packet.");
+
+        // Close
+
+        handshake.close();
+        handshake_bytes.close();
         out.close();
+        in.close();
+        socket.close();
 
-        final String[] bits = sb.toString().split("\0");
-        if (bits.length != 6) {
-            return this.getPing(sb.toString(), hostname, port);
-        }
-
-        return new MinecraftPingReply(hostname, port, bits[3], bits[1], bits[2], Integer.valueOf(bits[4]), Integer.valueOf(bits[5]));
+        return new Gson().fromJson(json, MinecraftPingReply.class);
     }
 
-    /**
-     * Returns a {@link MinecraftPingReply} for the response supplied. <b>Only call from {@link MinecraftPing#getPing(String, int)}.</b>
-     * 
-     * <p>
-     * This method isn't intended for use outside of the {@link MinecraftPing} class.
-     * 
-     * @param response - the pre-12w42b ping reply message
-     * @param hostname - the IP of the server ping was requested from
-     * @param port - the port of the server ping was requested from
-     * @return {@link MinecraftPingReply} - list of basic server information
-     * @throws IOException thrown when incorrect message supplied
-     */
-    @Deprecated
-    public MinecraftPingReply getPing(final String response, final String hostname, final int port) throws IOException {
-        this.validate(response, "Response cannot be null. Try calling MinecraftPing.getPing().");
-        this.validate(hostname, "Hostname cannot be null.");
-        this.validate(port, "Port cannot be null.");
-
-        final String[] bits = response.split("\u00a7");
-
-        if (bits.length != 3) {
-            throw new IOException("Bad message: Failed to parse pre-12w42b ping message, check to see if it's correct?");
-        }
-
-        return new MinecraftPingReply(hostname, port, bits[0], Integer.valueOf(bits[2]), Integer.valueOf(bits[1]));
-    }
-
-    private void validate(final Object o, final String m) {
-        if (o == null) {
-            throw new RuntimeException(m);
-        }
-    }
 }
