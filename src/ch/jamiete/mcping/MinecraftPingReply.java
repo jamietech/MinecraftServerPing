@@ -71,13 +71,13 @@ public class MinecraftPingReply {
     }
     
     public class Description {
-    	private String text;
+        private String text;
     	
     	/**
     	 * @return Server description text
     	 */
     	public String getText() {
-    		return this.text;
+            return this.text;
     	}
     }
 
